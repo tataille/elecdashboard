@@ -1,3 +1,7 @@
 cd elecdashboard
-DISPLAY=:0 npm start
+export DISPLAY=:0.0
+xset s off
+xset s noblank
+xset -dpms
+npm start
 

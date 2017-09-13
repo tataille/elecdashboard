@@ -22,6 +22,24 @@ npm install
 # Run the app
 npm start
 ```
+# Start the Dashboard at PI startup
+
+copy ed.sh one directory upper the project directory
+
+```
+ chmod +x ed.sh
+ npm install pm2 -g
+ pm2 start ed.sh
+ pm2 save
+ sudo pm2 startup systemd -u pi --hp /home/pi
+ # Hide the cursor
+ sudo apt-get install unclutter
+ # Remove the screen saver
+ nano ~/.config/lxsession/LXDE-pi/autostart
+ #add "@unclutter -idle 0" in the file 
+ #delete line "xscreensaver -nosplash"
+ 
+```
 
 Note: If you're using Linux Bash for Windows, [see this guide](https://www.howtogeek.com/261575/how-to-run-graphical-linux-desktop-applications-from-windows-10s-bash-shell/) or use `node` from the command prompt.
 
