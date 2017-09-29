@@ -43,6 +43,11 @@ copy ed.sh one directory upper the project directory
 
 Note: If you're using Linux Bash for Windows, [see this guide](https://www.howtogeek.com/261575/how-to-run-graphical-linux-desktop-applications-from-windows-10s-bash-shell/) or use `node` from the command prompt.
 
+# Swagger documentation
+
+Once started, navigate to http://<wallboard_host>:1338/api-docs to get the online documentation
+
+
 ## License
 
 [Apache](LICENSE.md)
