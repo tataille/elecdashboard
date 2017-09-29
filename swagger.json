@@ -1,0 +1,239 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "",
+    "version": "1.0.0",
+    "title": "Electron Dashboard",
+    "contact": {
+      "email": "jean.marc.taillant@gmail.com"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  },
+  "tags": [
+    {
+      "name": "wallboard",
+      "description": "Everything about your Wallboard",
+      "externalDocs": {
+        "description": "Find out more about Electron Dashboard",
+        "url": "https://github.com/tataille/elecdashboard"
+      }
+    }
+  ],
+  "schemes": [
+    "http"
+  ],
+  "paths": {
+    "/dashboard/display": {
+      "post": {
+        "tags": [
+          "wallboard"
+        ],
+        "summary": "Add a new URL to the Wallboard",
+        "description": "",
+        "operationId": "displayUrl",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "URL object that needs to be displayed on the Wallboard",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Page"
+            }
+          }
+        ],
+        "responses": {
+          "405": {
+            "description": "Invalid input"
+          }
+        }
+      }
+    },
+    "/dashboard/display/{action}": {
+      "post": {
+        "tags": [
+          "wallboard"
+        ],
+        "summary": "Execute an action on the Wallboarc",
+        "description": "",
+        "operationId": "displayAction",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "action",
+            "in": "path",
+            "description": "Action (sleep/wakeup)",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "405": {
+            "description": "Invalid input"
+          }
+        }
+      }
+    },
+    "/dashboard/info": {
+      "get": {
+        "tags": [
+          "wallboard"
+        ],
+        "summary": "Display Wallboard info",
+        "description": "Multiple status values can be provided with comma separated strings",
+        "operationId": "displayInfo",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation"
+          }
+        }
+      }
+    },
+    "/dashboard/url": {
+      "delete": {
+        "tags": [
+          "wallboard"
+        ],
+        "summary": "Deletes an URL from Wallboard list",
+        "description": "",
+        "operationId": "deletePage",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "Id of the URL that needs to be deleted on the Wallboard",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "URL deleted"
+          }
+        }
+      }
+    },
+    "/dashboard/{action}": {
+      "post": {
+        "tags": [
+          "wallboard"
+        ],
+        "summary": "Schedule an action on the Wallboard",
+        "description": "",
+        "operationId": "scheduleAction",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "action",
+            "in": "path",
+            "type": "string",
+            "description": "Action to schedule (slide/sleep/wakeup) on the Wallboard",
+            "required": true
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "description": "Cron definition",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Cron"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "URL deleted"
+          }
+        }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "petstore_auth": {
+      "type": "oauth2",
+      "authorizationUrl": "http://petstore.swagger.io/oauth/dialog",
+      "flow": "implicit",
+      "scopes": {
+        "write:pets": "modify pets in your account",
+        "read:pets": "read your pets"
+      }
+    }
+  },
+  "definitions": {
+    "Cron": {
+      "type": "object",
+      "required": [
+        "time"
+      ],
+      "properties": {
+        "time": {
+          "type": "string",
+          "description": "See https://crontab.guru/"
+        }
+      }
+    },
+    "Id": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "example": "myid"
+        }
+      }
+    },
+    "Page": {
+      "type": "object",
+      "required": [
+        "url",
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "example": "myid"
+        },
+        "url": {
+          "type": "string",
+          "example": "http://www.google.fr"
+        }
+      }
+    }
+  },
+  "externalDocs": {
+    "description": "Find out more about Electron Dashboard",
+    "url": "https://github.com/tataille/elecdashboard"
+  }
+}
