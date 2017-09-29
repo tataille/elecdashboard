@@ -11,6 +11,9 @@ const loki = require('lokijs');
 const parser = require('cron-parser');
 const schedule = require('node-schedule');
 const exec = require('exec');
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocument = require('./swagger.json');
+
 
 var slideJob;
 var sleepJob;
@@ -404,6 +407,7 @@ router.post('/exit',function(req, res) {
     process.exit();
 });
 
+appExpress.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // REGISTER OUR ROUTES -------------------------------
 // all of our routes will be prefixed with /api
