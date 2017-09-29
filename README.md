@@ -22,9 +22,19 @@ npm install
 # Run the app
 npm start
 ```
+
+# Configure Security
+
+Edit users.htpasswd file and modifiy default user (username). Multiple users can be added. One per line
+
+```
+ user1:password1
+ user2:password2
+```
+
 # Start the Dashboard at PI startup
 
-copy ed.sh one directory upper the project directory
+Copy ed.sh one directory upper the project directory
 
 ```
  chmod +x ed.sh
