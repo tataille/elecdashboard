@@ -45,7 +45,7 @@ Note: If you're using Linux Bash for Windows, [see this guide](https://www.howto
 
 # Swagger documentation
 
-Once started, navigate to http://<wallboard_host>:1338/api-docs to get the online documentation
+Once started, navigate to [http://<wallboard_host>:1338/api-docs](http://<wallboard_host>:1338/api-docs) to get the online documentation
 
 
 ## License
