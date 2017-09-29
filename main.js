@@ -10,6 +10,7 @@ const url = require('url');
 const loki = require('lokijs');
 const parser = require('cron-parser');
 const schedule = require('node-schedule');
+const exec = require('exec');
 
 var slideJob;
 var sleepJob;
@@ -358,7 +359,7 @@ router.get('/info', function(req, res) {
     message: 'IP'+ip.address(),
     duration: 5
   });
-  res.json({'IP': ip.address(), "Urls": getUrls().data});
+  res.json({'IP': ip.address(), "Urls": getUrls().data, "Times": getTimes()});
 });
 
 router.get('/times', function(req, res) {
