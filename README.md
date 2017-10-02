@@ -19,6 +19,8 @@ git clone https://github.com/tataille/elecdashboard
 cd elecdashboard
 # Install dependencies
 npm install
+# If installation fails due to electron post install steps, enter following command:
+# sudo npm install -g electron --unsafe-perm=true --allow-root 
 # Run the app
 npm start
 ```
@@ -56,7 +58,6 @@ Note: If you're using Linux Bash for Windows, [see this guide](https://www.howto
 # Swagger documentation
 
 Once started, navigate to [http://<wallboard_host>:1338/api-docs](http://<wallboard_host>:1338/api-docs) to get the online documentation
-
 
 ## License
 
