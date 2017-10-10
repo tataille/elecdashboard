@@ -14,11 +14,18 @@ const exec = require('exec');
 const swaggerUi = require('swagger-ui-express');
 const swaggerDocument = require('./swagger.json');
 
+var TARGET = {
+  URL : {value: 1, name: "url"}, 
+  VIDEO: {value: 2, name: "video"}, 
+  IMG : {value: 3, name: "image"},
+  REPO : {value: 4, name: "repository"}
+};
 
 var slideJob;
 var sleepJob;
 var wakeUpJob;
 var currentIndex = 0;
+var loadedPage;
 var db = new loki('dashboard.db', {
 	autoload: true,
 	autoloadCallback : databaseInitialize,
@@ -37,13 +44,8 @@ function initJobs(){
   var slideTime = getSlideTime();
   var sleepTime = getSleepTime();
   var wakeUpTime = getWakeUpTime();
-  if ( slideTime.length>0){
-   console.log("Slide time pattern "+slideTime[0].pattern);
-   slideJob = schedule.scheduleJob(slideTime[0].pattern, function(){
-     console.log('Sliding next URL!');
-     nextSlide();
-   });
-  }
+  console.log('Sliding next URL!');
+  nextSlide();
   if ( sleepTime.length>0){
    console.log("Sleep time pattern "+sleepTime[0].pattern);
    sleepJob = schedule.scheduleJob(sleepTime[0].pattern, function(){
@@ -216,7 +218,12 @@ function nextSlide(){
   if ( currentIndex == 0 && count == 0){
     return
   }
-  console.log("Displaying "+urls.data[currentIndex].id+" ("+urls.data[currentIndex].url+")");
+  console.log("Displaying "+urls.data[currentIndex].id+" ("+urls.data[currentIndex].url+") for "+urls.data[currentIndex].duration+" seconds");
+  loadedPage = {
+         id : urls.data[currentIndex].id,
+         duration: urls.data[currentIndex].duration
+  }
+              
   mainWindow.loadURL(urls.data[currentIndex].url);
 }
 
@@ -282,20 +289,29 @@ function createWindow () {
   }))
   contents = mainWindow.webContents
   contents.on('did-fail-load', (event) => {
-	  mainWindow.loadURL(url.format({
-    pathname: path.join(__dirname, 'error.html'),
-    protocol: 'file:',
-    slashes: true
-  }))
-  })
+     notifier.notify('Dashboard Infos', {
+        message: 'Cannot load page: "+ loadedPage.id,
+        duration: 30
+      });
+   nextSlide();
+  });
 
-  // Emitted when the window is closed.
+  contents.on('did-finish-load', () => {
+  // Use default printing options
+   slideJob = schedule.scheduleJob(new Date(Date.now()+ (loadedPage.duration * 1000)), function(){
+     console.log('Sliding next URL!');
+     nextSlide();
+   });
+  
+  });
+
+ // Emitted when the window is closed.
   mainWindow.on('closed', function () {
     // Dereference the window object, usually you would store windows
     // in an array if your app supports multi windows, this is the time
     // when you should delete the corresponding element.
     mainWindow = null
-  })
+  });
 
   //Display for 1 minute the Dashboard IP
   notifier.notify('Dashboard Infos', { 
