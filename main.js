@@ -32,7 +32,7 @@ var logger = createLogger({
 
 
 
-const default_slide_time = 10;
+const default_slide_time = 60;
 var TARGET = {
   URL : {value: 1, name: "url"}, 
   VIDEO: {value: 2, name: "video"}, 
