@@ -31,6 +31,7 @@
     "ip": "^1.1.5",
     "lokijs": "^1.5.0",
     "node-schedule": "^1.2.4",
-    "swagger-ui-express": "^2.0.8"
+    "swagger-ui-express": "^2.0.8",
+    "winston": "^3.0.0-rc0"
   }
 }
