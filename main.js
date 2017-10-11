@@ -32,7 +32,7 @@ var logger = createLogger({
 
 
 
-const default_slide_time = 60;
+const default_slide_time = 10;
 var TARGET = {
   URL : {value: 1, name: "url"}, 
   VIDEO: {value: 2, name: "video"}, 
@@ -93,7 +93,7 @@ function initJobs(){
 }
 // implement the autoloadback referenced in loki constructor
 function databaseInitialize() {
-  var urls = db.getCollection("urls");
+  var urls = db.getCollection("urls",{ indices: ['id'] });
   if (urls === null) {
     urls = db.addCollection("urls");
   }
@@ -116,8 +116,8 @@ function runProgramLogic() {
 	  });
 
     });
-    initJobs();
   }
+  initJobs();
 }
 
 function getUrls(){
@@ -143,6 +143,21 @@ function getSlideTime(){
     return null;
   }
   return times.find( {'type':'slide'});
+}
+
+function addSlide(slide){
+	var urls = db.getCollection("urls");
+  if ( urls == null ){
+    urls = db.addCollection("urls");
+  }
+  if ( slide == null){
+    return;
+  }
+  var existing = urls.chain().find( {'id': slide.id});
+  if (existing != null){
+    existing.remove();
+  }
+  urls.insert(slide);
 }
 
 function setSlideTime( timePattern){  
@@ -241,6 +256,10 @@ function sleep(){
 }
 
 function displayHome(){
+	loadedPage = {
+         id : "home",
+		 status: "unknown"
+    }
 	mainWindow.loadURL(url.format({
     pathname: path.join(__dirname, 'index.html'),
     protocol: 'file:',
@@ -249,6 +268,9 @@ function displayHome(){
 }
 
 function nextSlide(){
+  if (slideJob){
+	  slideJob.cancel();
+  }
   slide_show_status = SLIDE_STATUS.STARTED.value;
   var urls  = getUrls();  
   var count = urls.count();  
@@ -257,21 +279,36 @@ function nextSlide(){
   }else{
    currentIndex = 0;
   }
-  if ( currentIndex == 0 && count == 0){
+  if ( currentIndex === 0 && count === 0){
 	slide_show_status = SLIDE_STATUS.STOPPED.value;
 	displayHome();
     return;
   }
-  
+  //check if last loadedPage is the same (case when only one slide) and if it failed, try next
+  if (loadedPage && (loadedPage.id === urls.data[currentIndex].id) && loadedPage.result === "failed"){
+	  logger.log("info","ici",{
+		  page: loadedPage.id,
+		  res: loadedPage.result
+	  });
+	  if (urls.data.length === 1){
+		  logger.log('info', 'Displaying home');
+		  displayHome();
+		  return;
+	  }
+	  nextSlide();
+	  return;
+  }
   logger.log('info', 'Displaying URL', {
 	id: urls.data[currentIndex].id,
 	url: urls.data[currentIndex].url,
 	duration: urls.data[currentIndex].duration,
 	authentication: urls.data[currentIndex].authentication
   });
+    
   loadedPage = {
          id : urls.data[currentIndex].id,
-         duration: urls.data[currentIndex].duration
+         duration: urls.data[currentIndex].duration,
+		 status: "unknown"
   }
   if (slide_show_status === SLIDE_STATUS.STARTED.value){
 	if (urls.data[currentIndex].authentication){
@@ -348,15 +385,31 @@ function createWindow () {
   mainWindow.setMenu(null);
   // and load the index.html of the app.
   displayHome();
-  contents = mainWindow.webContents
-  contents.on('did-fail-load', (event) => {
-	
+  contents = mainWindow.webContents;
+  contents.on('did-fail-load', (event,errorCode) => {
+	logger.log("error","finish-failed",{
+		id: loadedPage.id,
+		err: errorCode
+	});
+	if(errorCode === -3){
+		if (!loadedPage.duration)
+			loadedPage.duration = default_slide_time;
+		loadedPage.result = 'success';
+		slideJob = schedule.scheduleJob(new Date(Date.now()+ (loadedPage.duration * 1000)), function(){
+			logger.log('info','Jumping to next slide');
+			nextSlide();
+		});
+	}else{
 		notifier.notify('Dashboard Infos', {
 			message: "Cannot load page: "+ loadedPage.id,
 			duration: 30
 		});
+		loadedPage.result="failed";
+		logger.log('error', 'Displaying slide',{
+			id: loadedPage.id
+		});
 		nextSlide();
-	
+	}
   });
   contents.on('login', (event, webContents, request, authInfo, callback) => {
   event.preventDefault();
@@ -366,20 +419,21 @@ function createWindow () {
   callback('username', 'secret')
 })
   contents.on('did-finish-load', () => {
+	  logger.log("info","finish-load",{
+		id: loadedPage.id
+	  });
 	if ( slide_show_status === SLIDE_STATUS.STOPPED.value){
 		return;
 	}
-   // Use default printing options
-   if (!loadedPage){
-	   nextSlide();
-	   return;
-   }
    if (!loadedPage.duration)
 		loadedPage.duration = default_slide_time;
+   if (loadedPage.result !== 'success'){
+   loadedPage.result = 'success';
    slideJob = schedule.scheduleJob(new Date(Date.now()+ (loadedPage.duration * 1000)), function(){
      logger.log('info','Jumping to next slide');
      nextSlide();
    });
+   }
   });
 
  // Emitted when the window is closed.
@@ -436,9 +490,10 @@ router.post('/display', function(req, res) {
 	}
 	if ( req.body.authentication)
 	
-    res.json({ message: 'Displaying '+ req.body.url +' ('+req.body.id+') for '+req.body.duration+' seconds'});  		    
-    getUrls().insert({id: req.body.id, url: req.body.url, duration: req.body.duration, authentication: req.body.authentication});
+    
+    addSlide({id: req.body.id, url: req.body.url, duration: req.body.duration, authentication: req.body.authentication});
 	nextSlide();
+	res.json({ message: 'Displaying '+ req.body.url +' ('+req.body.id+') for '+req.body.duration+' seconds'});  		    
 });
 
 router.delete('/url', function(req, res) {
