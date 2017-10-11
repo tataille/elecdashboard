@@ -21,9 +21,9 @@ paths:
     post:
       tags:
         - wallboard
-      summary: Add a new URL to the Wallboard
+      summary: Add a new Slide to the Wallboard
       description: ''
-      operationId: displayUrl
+      operationId: displaySlide
       consumes:
         - application/json
       produces:
@@ -34,7 +34,7 @@ paths:
           description: URL object that needs to be displayed on the Wallboard
           required: true
           schema:
-            $ref: '#/definitions/Page'
+            $ref: '#/definitions/Slide'
       responses:
         '405':
           description: Invalid input
@@ -42,7 +42,7 @@ paths:
     post:
       tags:
         - wallboard
-      summary: Execute an action on the Wallboarc
+      summary: Execute an action on the Wallboarb
       description: ''
       operationId: displayAction
       consumes:
@@ -142,7 +142,7 @@ definitions:
       id:
         type: string
         example: myid
-  Page:
+  Slide:
     type: object
     required:
       - url
@@ -154,6 +154,20 @@ definitions:
       url:
         type: string
         example: 'http://www.google.fr'
+      duration:
+        type: integer
+        example: '180'
+        description: Time to display the slide in seconds
+      authentication:
+        type: object
+        required:
+          - username
+          - password
+        properties:
+          username:
+            type: string
+          password:
+            type: string
 externalDocs:
   description: Find out more about Electron Dashboard
   url: 'https://github.com/tataille/elecdashboard'
