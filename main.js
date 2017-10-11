@@ -13,19 +13,44 @@ const schedule = require('node-schedule');
 const exec = require('exec');
 const swaggerUi = require('swagger-ui-express');
 const swaggerDocument = require('./swagger.json');
+const { createLogger, format, transports } = require('winston');
+const { combine, timestamp, label, printf } = format;
 
+//set some logs settings
+var logger = createLogger({
+	format: combine(		
+		format.timestamp(),
+		format.simple(),
+		format.colorize({ all: true })
+
+	),
+	transports: [
+		new transports.Console(),
+		new transports.File({ filename: 'combined.log' })
+	]
+});
+
+
+
+const default_slide_time = 60;
 var TARGET = {
   URL : {value: 1, name: "url"}, 
   VIDEO: {value: 2, name: "video"}, 
   IMG : {value: 3, name: "image"},
   REPO : {value: 4, name: "repository"}
-};
+}
+
+var SLIDE_STATUS = {
+	STOPPED: {value: 1, name: "stopped"},
+	STARTED: {value: 2, name: "started"}
+}
 
 var slideJob;
 var sleepJob;
 var wakeUpJob;
 var currentIndex = 0;
 var loadedPage;
+var slide_show_status = SLIDE_STATUS.STOPPED.value;
 var db = new loki('dashboard.db', {
 	autoload: true,
 	autoloadCallback : databaseInitialize,
@@ -43,22 +68,26 @@ function initJobs(){
 
   var slideTime = getSlideTime();
   var sleepTime = getSleepTime();
-  var wakeUpTime = getWakeUpTime();
-  console.log('Sliding next URL!');
+  var wakeUpTime = getWakeUpTime();  
+  logger.log('debug', 'Sliding next URL!');
   nextSlide();
-  if ( sleepTime.length>0){
-   console.log("Sleep time pattern "+sleepTime[0].pattern);
+  if ( sleepTime.length>0){   
+   logger.log('debug', 'Sleep time pattern', {
+		pattern: sleepTime[0].pattern
+	});
    sleepJob = schedule.scheduleJob(sleepTime[0].pattern, function(){
-     console.log('Go Sleeping!');
+     logger.log('info', 'Goint to sleep');
      sleep();
    });
   }
   if ( wakeUpTime.length>0){
-   console.log("WakeUp time pattern "+wakeUpTime[0].pattern);
-   wakeUpJob = schedule.scheduleJob(wakeUpTime[0].pattern, function(){
-     console.log('Waking up!');
+    logger.log('debug', 'WakeUp time pattern', {
+		pattern: wakeUpTime[0].pattern
+	});
+	wakeUpJob = schedule.scheduleJob(wakeUpTime[0].pattern, function(){
+     logger.log('info','Waking up!');
      wakeUp();
-   });
+	});
   }
 
 }
@@ -75,11 +104,17 @@ function databaseInitialize() {
 // example method with any bootstrap logic to run after database initialized
 function runProgramLogic() {
   var urlCount = db.getCollection("urls").count();
-  console.log("number of urls in database : " + urlCount);
+  logger.log('debug', 'Number of urls in database', {
+		count: urlCount
+	});
   var times = db.getCollection("times");
   if ( times != null){
     times.data.forEach(function(t){
-      console.log(t.type+":"+t.pattern);
+      logger.log('debug', 'Cron', {
+		type: t.type,
+		pattern: t.pattern
+	  });
+
     });
     initJobs();
   }
@@ -110,8 +145,7 @@ function getSlideTime(){
   return times.find( {'type':'slide'});
 }
 
-function setSlideTime( timePattern){
-  console.log(timePattern);
+function setSlideTime( timePattern){  
   var times = db.getCollection("times");
   if ( times == null ){
     times = db.addCollection("times");
@@ -136,8 +170,7 @@ function getWakeUpTime(){
   return times.find( {'type':'wakeup'});
 }
 
-function setWakeUpTime( timePattern){
-  console.log(timePattern);
+function setWakeUpTime( timePattern){  
   var times = db.getCollection("times");
   if ( times == null ){
     times = db.addCollection("times");
@@ -152,8 +185,7 @@ function setWakeUpTime( timePattern){
   times.insert(  {'type':'wakeup', 'pattern':timePattern});
 }
 
-function setSleepTime( timePattern){
-  console.log(timePattern);
+function setSleepTime( timePattern){  
   var times = db.getCollection("times");
   if (times == null ){
     times = db.addCollection("times");
@@ -169,7 +201,9 @@ function setSleepTime( timePattern){
 }
 
 function deleteUrl( id){
-  console.log("Deleting: "+id);
+  logger.log('debug', 'Deleting URL', {
+		urlId: id
+	});
   var urls = db.getCollection("urls");
   if (urls == null ){
     urls = db.addCollection("urls");
@@ -196,43 +230,66 @@ function getSleepTime(){
 function sleep(){
   child = exec('echo "standby 0" | cec-client -s',
    function (error, stdout, stderr) {
-     console.log("Turned off TV successfully");
+	 logger.log('info', 'Turned off TV successfully');
      if (error !== null) {
-       console.log('exec error: ' + error);
+       logger.log('error','exec error', {
+		   errorMsg: error
+	   });
      }
    });
 
 }
 
+function displayHome(){
+	mainWindow.loadURL(url.format({
+    pathname: path.join(__dirname, 'index.html'),
+    protocol: 'file:',
+    slashes: true
+  }))
+}
+
 function nextSlide(){
-  var urls  = getUrls();
-  console.log(urls.data);
-  var count = urls.count();
-  console.log(count);
-  console.log(currentIndex);
+  slide_show_status = SLIDE_STATUS.STARTED.value;
+  var urls  = getUrls();  
+  var count = urls.count();  
   if ( currentIndex < count-1){
    currentIndex++;
   }else{
    currentIndex = 0;
   }
   if ( currentIndex == 0 && count == 0){
-    return
+	slide_show_status = SLIDE_STATUS.STOPPED.value;
+	displayHome();
+    return;
   }
-  console.log("Displaying "+urls.data[currentIndex].id+" ("+urls.data[currentIndex].url+") for "+urls.data[currentIndex].duration+" seconds");
+  
+  logger.log('info', 'Displaying URL', {
+	id: urls.data[currentIndex].id,
+	url: urls.data[currentIndex].url,
+	duration: urls.data[currentIndex].duration,
+	authentication: urls.data[currentIndex].authentication
+  });
   loadedPage = {
          id : urls.data[currentIndex].id,
          duration: urls.data[currentIndex].duration
   }
-              
-  mainWindow.loadURL(urls.data[currentIndex].url);
+  if (slide_show_status === SLIDE_STATUS.STARTED.value){
+	if (urls.data[currentIndex].authentication){
+		mainWindow.loadURL(urls.data[currentIndex].url, {extraHeaders: 'Authorization: Basic anRhaWxsYTpwYXNzd29yZDI=\n'});
+	}else{
+		mainWindow.loadURL(urls.data[currentIndex].url);
+	}
+  }
 }
 
 function wakeUp(){
   child = exec('echo "on 0" | cec-client -s',
-  function (error, stdout, stderr) {
-    console.log("Turned on TV successfully");
+  function (error, stdout, stderr) {    
+	logger.log('info', 'Turned on TV Successfully');
     if (error !== null) {
-      console.log('exec error: ' + error);
+      logger.log('error','exec error', {
+		   errorMsg: error
+	   });
     }
   });
 }
@@ -259,16 +316,24 @@ var basic = auth.basic({
     file: __dirname + "/users.htpasswd"
 });
 
-basic.on('success', (result, req) => {
-    console.log(`User authenticated: ${result.user}`);
+basic.on('success', (result, req) => {    
+	logger.log('info','User authenticated', {
+		   user: result.user
+	   });
 });
+
+
  
 basic.on('fail', (result, req) => {
-    console.log(`User authentication failed: ${result.user}`);
+	logger.log('error','User authentication failed', {
+		   user: result.user
+	   });
 });
  
 basic.on('error', (error, req) => {
-    console.log(`Authentication error: ${error.code + " - " + error.message}`);
+    logger.log('error','User authentication error', {
+		   errorMsg: error
+	});
 });
 
 appExpress.use(auth.connect(basic));
@@ -282,27 +347,39 @@ function createWindow () {
   mainWindow = new BrowserWindow({kiosk: true, webPreferences:{ nodeIntegration: false}})
   mainWindow.setMenu(null);
   // and load the index.html of the app.
-  mainWindow.loadURL(url.format({
-    pathname: path.join(__dirname, 'index.html'),
-    protocol: 'file:',
-    slashes: true
-  }))
+  displayHome();
   contents = mainWindow.webContents
   contents.on('did-fail-load', (event) => {
-     notifier.notify('Dashboard Infos', {
-        message: 'Cannot load page: "+ loadedPage.id,
-        duration: 30
-      });
-   nextSlide();
+	
+		notifier.notify('Dashboard Infos', {
+			message: "Cannot load page: "+ loadedPage.id,
+			duration: 30
+		});
+		nextSlide();
+	
   });
-
+  contents.on('login', (event, webContents, request, authInfo, callback) => {
+  event.preventDefault();
+  logger.log('info','Authentication required', {
+		   page: loadedPage.id
+	});
+  callback('username', 'secret')
+})
   contents.on('did-finish-load', () => {
-  // Use default printing options
+	if ( slide_show_status === SLIDE_STATUS.STOPPED.value){
+		return;
+	}
+   // Use default printing options
+   if (!loadedPage){
+	   nextSlide();
+	   return;
+   }
+   if (!loadedPage.duration)
+		loadedPage.duration = default_slide_time;
    slideJob = schedule.scheduleJob(new Date(Date.now()+ (loadedPage.duration * 1000)), function(){
-     console.log('Sliding next URL!');
+     logger.log('info','Jumping to next slide');
      nextSlide();
    });
-  
   });
 
  // Emitted when the window is closed.
@@ -314,7 +391,7 @@ function createWindow () {
   });
 
   //Display for 1 minute the Dashboard IP
-  notifier.notify('Dashboard Infos', { 
+  notifier.notify('Wallboard Infos', { 
     message: 'IP'+ip.address(),
     duration: 30
   });
@@ -350,15 +427,24 @@ var router = express.Router();              // get an instance of the express Ro
 
 // test route to make sure everything is working (accessed at GET http://localhost:8080/api)
 router.post('/display', function(req, res) {
-    res.json({ message: 'Displaying '+ req.body.url +' ('+req.body.id+')'});  		
-    //mainWindow.loadURL(req.body.url);
-    getUrls().insert({id: req.body.id, url: req.body.url});
+	if ( req.body.duration){
+		if (req.body.duration < default_slide_time){
+			req.body.duration = default_slide_time;
+		}
+	}else{
+		req.body.duration = default_slide_time;
+	}
+	if ( req.body.authentication)
+	
+    res.json({ message: 'Displaying '+ req.body.url +' ('+req.body.id+') for '+req.body.duration+' seconds'});  		    
+    getUrls().insert({id: req.body.id, url: req.body.url, duration: req.body.duration, authentication: req.body.authentication});
+	nextSlide();
 });
 
 router.delete('/url', function(req, res) {
-    res.json({ message: 'Deleting '+ req.body.id});
-    //mainWindow.loadURL(req.body.url);
+    res.json({ message: 'Deleting '+ req.body.id});    
     deleteUrl(req.body.id);
+	initJobs();
 });
 
 
@@ -432,4 +518,7 @@ appExpress.use('/dashboard', router);
 //START THE SERVER
 // =============================================================================
 appExpress.listen(port);
-console.log('Dashboard accessible on port ' + port);
+	logger.log('info','Dashboard started', {
+		   dashboardPort: port
+	});
+
