@@ -32,7 +32,7 @@ var logger = createLogger({
 
 
 
-const default_slide_time = 60;
+const default_slide_time = 30;
 var TARGET = {
   URL : {value: 1, name: "url"}, 
   VIDEO: {value: 2, name: "video"}, 
@@ -487,11 +487,8 @@ router.post('/display', function(req, res) {
 		}
 	}else{
 		req.body.duration = default_slide_time;
-	}
-	if ( req.body.authentication)
-	
-    
-    addSlide({id: req.body.id, url: req.body.url, duration: req.body.duration, authentication: req.body.authentication});
+	}    
+        addSlide({id: req.body.id, url: req.body.url, duration: req.body.duration, authentication: req.body.authentication});
 	nextSlide();
 	res.json({ message: 'Displaying '+ req.body.url +' ('+req.body.id+') for '+req.body.duration+' seconds'});  		    
 });
