@@ -18,6 +18,7 @@ git clone https://github.com/tataille/elecdashboard
 # Go into the repository
 cd elecdashboard
 # Install dependencies
+sudo npm install -g electron --unsafe-perm=true --allow-root
 npm install
 # If installation fails due to electron post install steps, enter following command:
 # sudo npm install -g electron --unsafe-perm=true --allow-root 
